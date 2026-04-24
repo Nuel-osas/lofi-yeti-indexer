@@ -314,6 +314,12 @@
   async function tryLocalRoute(question) {
     const q = question.trim().toLowerCase();
 
+    // 0. Chitchat / greetings / generic questions → fall through to LLM so Groq
+    //    can answer naturally. We only route to REST when the user is clearly
+    //    asking about NFT data.
+    const chitChat = /^(hi|hello|hey|sup|yo|hola|good\s+(morning|afternoon|evening|night)|thanks?|thank\s*you|ok(ay)?|cool|nice|wow|bye|goodbye|help|who\s+are\s+you|what\s+can\s+you\s+do|tell\s+me\s+about\s+yourself)[!.?]*\s*$/i;
+    if (chitChat.test(q)) return null;
+
     // 1. "yeti #NNN" / "yeti NNN" / bare "NNN" → by-number
     const numMatch = q.match(/(?:^|\s)#?(\d{1,5})(?:$|\s)/);
     if (numMatch) {
