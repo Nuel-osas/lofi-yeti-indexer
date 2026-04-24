@@ -1,0 +1,464 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Mystic Yeti · Ask Anything</title>
+<style>
+  :root {
+    --bg: #0b0e14;
+    --bg-soft: #131826;
+    --card: #171c2a;
+    --card-hover: #1d2437;
+    --border: #242c40;
+    --text: #eaecf2;
+    --text-dim: #8a93ab;
+    --text-faint: #5b6480;
+    --accent: #b78d5b;
+    --accent-2: #7fa4d4;
+    --success: #5ec28a;
+    --danger: #e37373;
+    --mono: ui-monospace, "JetBrains Mono", Menlo, monospace;
+  }
+
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0; min-height: 100vh;
+    background: radial-gradient(1000px 600px at 10% -10%, rgba(183,141,91,0.08), transparent 55%),
+                radial-gradient(900px 500px at 100% 10%, rgba(127,164,212,0.06), transparent 60%),
+                var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Inter", system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .page { max-width: 960px; margin: 0 auto; padding: 40px 24px 80px; }
+
+  header.hero {
+    margin-bottom: 32px;
+  }
+  .kicker {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--accent);
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    margin: 0 0 8px;
+  }
+  h1 {
+    margin: 0 0 8px;
+    font-size: 32px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    background: linear-gradient(90deg, #fff 0%, var(--accent-2) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .sub { color: var(--text-dim); font-size: 14px; margin: 0; }
+
+  .chat {
+    background: var(--bg-soft);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 16px;
+    margin-top: 24px;
+  }
+  .messages {
+    max-height: 380px;
+    overflow-y: auto;
+    margin-bottom: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .messages:empty::before {
+    content: "Ask anything about the Mystic Yeti collection. Try one of the suggestions below.";
+    color: var(--text-faint);
+    font-style: italic;
+    padding: 20px 4px;
+    display: block;
+  }
+  .msg { max-width: 85%; padding: 10px 14px; border-radius: 10px; font-size: 14px; line-height: 1.5; white-space: pre-wrap; word-wrap: break-word; }
+  .msg.user { align-self: flex-end; background: var(--accent-2); color: #0b0e14; }
+  .msg.assistant { align-self: flex-start; background: var(--card); color: var(--text); border: 1px solid var(--border); }
+  .msg.error { align-self: flex-start; background: rgba(227,115,115,0.12); color: var(--danger); border: 1px solid rgba(227,115,115,0.3); }
+
+  .input-row { display: flex; gap: 8px; }
+  input.q {
+    flex: 1;
+    padding: 12px 14px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--text);
+    font-family: inherit;
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  input.q:focus { border-color: var(--accent); }
+  button.send {
+    padding: 12px 20px;
+    border: none;
+    border-radius: 10px;
+    background: linear-gradient(90deg, var(--accent) 0%, var(--accent-2) 100%);
+    color: #0b0e14;
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: filter 0.15s;
+  }
+  button.send:hover:not(:disabled) { filter: brightness(1.08); }
+  button.send:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+  .chip {
+    font-size: 12px;
+    padding: 6px 12px;
+    background: transparent;
+    color: var(--text-dim);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .chip:hover { border-color: var(--accent); color: var(--text); }
+
+  section.results {
+    margin-top: 28px;
+  }
+  .results-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 14px;
+  }
+  .results-header h2 { margin: 0; font-size: 16px; font-weight: 600; }
+  .results-header .count { color: var(--text-dim); font-size: 13px; font-family: var(--mono); }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 14px;
+  }
+  .grid:empty::before {
+    content: "Run a query to see yetis here.";
+    color: var(--text-faint);
+    font-style: italic;
+    font-size: 13px;
+    padding: 20px 4px;
+    display: block;
+    grid-column: 1 / -1;
+  }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    transition: border-color 0.15s, transform 0.15s;
+  }
+  .card:hover { border-color: var(--accent); transform: translateY(-2px); }
+  .card img {
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    object-fit: cover;
+    background: var(--bg-soft);
+    display: block;
+  }
+  .card-body { padding: 10px 12px; }
+  .card-name { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 6px; }
+  .attrs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+  .attr {
+    font-size: 10px;
+    padding: 2px 7px;
+    background: var(--bg-soft);
+    color: var(--text-dim);
+    border-radius: 999px;
+    font-family: var(--mono);
+  }
+
+  footer { margin-top: 40px; color: var(--text-faint); font-size: 11px; font-family: var(--mono); text-align: center; }
+  footer a { color: var(--text-dim); text-decoration: none; }
+  footer a:hover { color: var(--accent); }
+
+  .thinking {
+    display: inline-flex;
+    gap: 4px;
+    align-items: center;
+    padding: 10px 14px;
+  }
+  .thinking span {
+    width: 6px; height: 6px;
+    background: var(--text-dim);
+    border-radius: 50%;
+    animation: pulse 1.4s infinite;
+  }
+  .thinking span:nth-child(2) { animation-delay: 0.2s; }
+  .thinking span:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes pulse {
+    0%, 60%, 100% { opacity: 0.3; transform: scale(1); }
+    30% { opacity: 1; transform: scale(1.3); }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+  <header class="hero">
+    <p class="kicker">LoFi · Mystic Yeti · Ask Anything</p>
+    <h1>Talk to the collection.</h1>
+    <p class="sub">
+      Indexed on-chain NFT data, queried with natural language via Groq.
+      Ask about traits, counts, specific yetis — the model picks the tool, runs SQL, answers.
+    </p>
+  </header>
+
+  <div class="chat">
+    <div id="messages" class="messages"></div>
+    <div class="input-row">
+      <input id="q" class="q" type="text"
+        placeholder="e.g. show me yetis with halos"
+        autocomplete="off" />
+      <button id="send" class="send">Ask</button>
+    </div>
+    <div class="chips">
+      <button class="chip" data-q="What traits exist in this collection?">What traits exist?</button>
+      <button class="chip" data-q="How many yetis are indexed so far?">How many yetis?</button>
+      <button class="chip" data-q="Show me yetis with halos">Yetis with halos</button>
+      <button class="chip" data-q="Show me orange furred yetis">Orange fur</button>
+      <button class="chip" data-q="What fur colors exist?">Fur colors</button>
+      <button class="chip" data-q="Show me yeti number 4737">Yeti #4737</button>
+      <button class="chip" data-q="Show me yetis with wings">Yetis with wings</button>
+    </div>
+  </div>
+
+  <section class="results">
+    <div class="results-header">
+      <h2>Results</h2>
+      <span id="count" class="count"></span>
+    </div>
+    <div id="grid" class="grid"></div>
+  </section>
+
+  <footer>
+    indexed from <code>0xb07b09b0…061bee::mystic_yeti::MysticYeti</code> on sui mainnet
+    · <a href="https://github.com/Nuel-osas" target="_blank" rel="noreferrer">@minting_ruru</a>
+  </footer>
+</div>
+
+<script>
+  const API = location.origin;
+  const messagesEl = document.getElementById("messages");
+  const gridEl = document.getElementById("grid");
+  const countEl = document.getElementById("count");
+  const qEl = document.getElementById("q");
+  const sendBtn = document.getElementById("send");
+  const chips = document.querySelectorAll(".chip");
+
+  function addMsg(text, cls) {
+    const el = document.createElement("div");
+    el.className = "msg " + cls;
+    el.textContent = text;
+    messagesEl.appendChild(el);
+    messagesEl.scrollTop = messagesEl.scrollHeight;
+    return el;
+  }
+
+  function addThinking() {
+    const el = document.createElement("div");
+    el.className = "msg assistant";
+    el.innerHTML = '<span class="thinking"><span></span><span></span><span></span></span>';
+    messagesEl.appendChild(el);
+    messagesEl.scrollTop = messagesEl.scrollHeight;
+    return el;
+  }
+
+  function renderNfts(nfts) {
+    gridEl.innerHTML = "";
+    countEl.textContent = nfts.length ? `${nfts.length} result${nfts.length === 1 ? "" : "s"}` : "";
+    for (const n of nfts) {
+      const card = document.createElement("div");
+      card.className = "card";
+      const img = document.createElement("img");
+      img.loading = "lazy";
+      img.src = n.image_url || "";
+      img.alt = n.name || "";
+      img.onerror = () => { img.style.display = "none"; };
+      const body = document.createElement("div");
+      body.className = "card-body";
+      body.innerHTML = `
+        <div class="card-name">${n.name || "Unnamed"}</div>
+        <div class="attrs">
+          ${(n.attributes || []).slice(0, 4).map(a =>
+            `<span class="attr">${a.trait_type}: ${a.value}</span>`
+          ).join("")}
+        </div>
+      `;
+      card.appendChild(img);
+      card.appendChild(body);
+      gridEl.appendChild(card);
+    }
+  }
+
+  // ============================================================
+  //  Local pattern router — handles obvious questions via direct
+  //  REST calls, no LLM roundtrip. Keeps the demo fast + dodges
+  //  Groq rate limits. Falls back to /chat for fuzzy queries.
+  // ============================================================
+
+  async function tryLocalRoute(question) {
+    const q = question.trim().toLowerCase();
+
+    // 1. "yeti #NNN" / "yeti NNN" / bare "NNN" → by-number
+    const numMatch = q.match(/(?:^|\s)#?(\d{1,5})(?:$|\s)/);
+    if (numMatch) {
+      const n = numMatch[1];
+      const r = await fetch(`${API}/nfts/by-number/${n}`).then(x => x.json());
+      if (r && r.number != null) {
+        return { answer: `Mystic Yeti #${r.number}.`, nfts: [r] };
+      }
+      return { answer: `No yeti with number ${n} in the indexed set.`, nfts: [] };
+    }
+
+    // 2. "how many X" / "count X" / "X count" — counting query
+    if (/\bhow many\b|\bcount\b/.test(q)) {
+      const cleaned = q
+        .replace(/\bhow many\b/g, "")
+        .replace(/\bcount\b/g, "")
+        .replace(/\byetis?\b/g, "")
+        .replace(/\bare\b|\bthere\b|\bhave\b|\bwith\b|\bof\b|\bthe\b|\bare\b/g, "")
+        .replace(/[?.,!]/g, "")
+        .trim();
+      if (cleaned) {
+        const r = await fetch(`${API}/nfts/search?q=${encodeURIComponent(cleaned)}&limit=200`).then(x => x.json());
+        const n = r.rows?.length ?? 0;
+        return {
+          answer: n > 0
+            ? `${n} yetis match “${cleaned}”.`
+            : `No yetis match “${cleaned}”. Try a simpler trait word.`,
+          nfts: r.rows ?? [],
+        };
+      }
+    }
+
+    // 3. "what traits exist" / "list traits" / "what can I search" — trait overview
+    if (/\bwhat traits\b|\blist traits\b|\bwhat can i (search|ask)\b|\btraits exist\b/.test(q)) {
+      const traits = await fetch(`${API}/traits`).then(x => x.json());
+      const list = traits.map(t => `${t.trait_type} (${t.unique_values} values)`).join(", ");
+      return { answer: `Trait categories: ${list}.`, nfts: [] };
+    }
+
+    // 4. "what <type>s exist" / "list <type>" — values for a type
+    const traitListMatch = q.match(/(?:what|which|list|show me)\s+(.+?)\s+(?:exist|are there|options|are available)/);
+    if (traitListMatch) {
+      const raw = traitListMatch[1].replace(/\b(fur|head gear|eyes|mouth|background|accessories|rarity)\b/g, m => m);
+      const attempt = await fetch(`${API}/traits`).then(x => x.json());
+      const match = attempt.find(t => t.trait_type.toLowerCase().includes(raw.split(" ")[0]));
+      if (match) {
+        const values = await fetch(`${API}/traits/${encodeURIComponent(match.trait_type)}`).then(x => x.json());
+        const list = values.values.slice(0, 15).map(v => `${v.trait_value} (${v.count})`).join(", ");
+        return { answer: `${match.trait_type} values: ${list}.`, nfts: [] };
+      }
+    }
+
+    // 5. "show me X" / "yetis with X" / "X yetis" — trait substring search
+    //    This catches "yetis with halos", "orange yetis", "halo", "wings", etc.
+    const stripped = q
+      .replace(/^(show me|show|find|get|list|which|who)\s+/g, "")
+      .replace(/\b(yetis?|nfts?|the)\b/g, "")
+      .replace(/\b(with|have|having|having a|that has|that have|has)\b/g, "")
+      .replace(/\bfurred\b/g, "fur")
+      .replace(/[?.,!]/g, "")
+      .trim();
+    if (stripped && stripped.length <= 40 && !/\b(rare|unique|most|least|average|best|worst)\b/.test(stripped)) {
+      const r = await fetch(`${API}/nfts/search?q=${encodeURIComponent(stripped)}&limit=50`).then(x => x.json());
+      if ((r.rows?.length ?? 0) > 0) {
+        return {
+          answer: `${r.rows.length} yeti${r.rows.length === 1 ? "" : "s"} match “${stripped}”.`,
+          nfts: r.rows,
+        };
+      }
+      // No matches locally → do NOT fall back to LLM for this case (saves quota).
+      // Offer what we know instead.
+      const traits = await fetch(`${API}/traits`).then(x => x.json());
+      const list = traits.map(t => t.trait_type).join(", ");
+      return {
+        answer: `No yetis match “${stripped}”. Available trait categories: ${list}.`,
+        nfts: [],
+      };
+    }
+
+    // 6. Fuzzy — let the LLM handle it.
+    return null;
+  }
+
+  async function ask(question) {
+    addMsg(question, "user");
+    const thinking = addThinking();
+    sendBtn.disabled = true;
+    qEl.disabled = true;
+
+    try {
+      // Try the local router first.
+      let data = await tryLocalRoute(question).catch(() => null);
+      let source = "local";
+
+      // Fall back to LLM only if local router returned null.
+      if (!data) {
+        source = "llm";
+        const res = await fetch(API + "/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ question }),
+        });
+        const raw = await res.json();
+        if (!res.ok || raw.error) {
+          thinking.remove();
+          addMsg(`Error: ${raw.error || res.statusText}`, "error");
+          return;
+        }
+        data = raw;
+      }
+
+      thinking.remove();
+      const tag = source === "local" ? " · indexed" : " · via LLM";
+      const answerEl = addMsg((data.answer || "(empty)") + tag, "assistant");
+      // Style the tag dimmer
+      answerEl.innerHTML = answerEl.innerHTML.replace(
+        tag,
+        `<span style="color: var(--text-faint); font-size: 11px; margin-left: 6px;">${tag.trim()}</span>`,
+      );
+      if (data.nfts && data.nfts.length) renderNfts(data.nfts);
+    } catch (e) {
+      thinking.remove();
+      addMsg("Network error: " + e.message, "error");
+    } finally {
+      sendBtn.disabled = false;
+      qEl.disabled = false;
+      qEl.focus();
+    }
+  }
+
+  sendBtn.addEventListener("click", () => {
+    const q = qEl.value.trim();
+    if (!q) return;
+    qEl.value = "";
+    ask(q);
+  });
+  qEl.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") sendBtn.click();
+  });
+  chips.forEach(c => c.addEventListener("click", () => {
+    const q = c.getAttribute("data-q");
+    if (q) ask(q);
+  }));
+
+  qEl.focus();
+</script>
+</body>
+</html>

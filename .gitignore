@@ -1,0 +1,9 @@
+node_modules/
+bun.lockb
+yetis.db
+yetis.db-journal
+yetis.db-wal
+yetis.db-shm
+.DS_Store
+.env
+probe.ts
