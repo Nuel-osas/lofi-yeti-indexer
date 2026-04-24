@@ -1,19 +1,21 @@
 # lofi-yeti-indexer
 
-A full NFT indexer + REST API + LLM-powered chat UI for the **LoFi Mystic Yeti** collection on Sui mainnet. Watches on-chain events, fetches every revealed yeti's full metadata (display, attributes, owner) into SQLite, and exposes it through a small Hono API + a single-page frontend that can answer natural-language questions about the collection.
+**Talk to an on-chain NFT collection in natural language.**
 
-Built as a reference implementation for the *"talk to your indexed on-chain data"* pattern. The architecture generalizes to any Sui NFT or event-emitting Move package — fork it, change the target, ship a Mystic-Whatever indexer in under an hour.
+A complete reference for the *"index a Sui NFT collection and chat with the data"* pattern. You run three things — an indexer, a REST API, and a tiny browser UI — and by the end a user can type *"show me yetis with halos"* and see 29 cards pop up with images and traits.
 
-**Target package:** [`0xb07b09b0…061bee::mystic_yeti::MysticYeti`](https://suivision.xyz/package/0xb07b09b016d28f989b6adda8069096da0c0a0ff6490f6e0866858c023b061bee) (Sui mainnet, ~5,500 revealed)
+The code works as-is against the **LoFi Mystic Yeti** collection on Sui mainnet. Change three constants and it points at any other Sui NFT collection.
+
+**Target package:** [`0xb07b09b0…061bee::mystic_yeti::MysticYeti`](https://suivision.xyz/package/0xb07b09b016d28f989b6adda8069096da0c0a0ff6490f6e0866858c023b061bee) (mainnet, ~5,500 revealed)
 
 ---
 
 ## Table of contents
 
-1. [What it does](#what-it-does)
-2. [Architecture](#architecture)
-3. [Requirements](#requirements)
-4. [Quick start](#quick-start)
+1. [Quick start](#quick-start) ← start here
+2. [Try these questions](#try-these-questions)
+3. [What it does](#what-it-does)
+4. [Architecture](#architecture)
 5. [Data model](#data-model)
 6. [REST endpoints](#rest-endpoints)
 7. [Chat endpoint + Groq integration](#chat-endpoint--groq-integration)
@@ -24,6 +26,73 @@ Built as a reference implementation for the *"talk to your indexed on-chain data
 12. [Troubleshooting](#troubleshooting)
 13. [Forking for a different collection](#forking-for-a-different-collection)
 14. [License](#license)
+
+---
+
+## Quick start
+
+You need **Bun** (one-line install) and a **free Groq API key** (2-minute signup at [console.groq.com](https://console.groq.com)). That's it — no Docker, no Postgres, no paid services.
+
+```bash
+# 1. clone
+git clone https://github.com/Nuel-osas/lofi-yeti-indexer.git
+cd lofi-yeti-indexer
+bun install
+```
+
+Then open **two terminals**.
+
+**Terminal 1 — the indexer** (backfills from chain, then live-tails forever):
+
+```bash
+bun run indexer
+```
+
+You'll see:
+```
+indexer: watching 0xb07b09b016d28f...::lofinfts_events::*
+indexer: 0 NFTs already in db
+indexer: no cursor — backfilling from origin
+indexer: +50 inserted · 0 updated · 0 skipped · total 50 · 1.2s
+indexer: +50 inserted · 0 updated · 0 skipped · total 100 · 1.1s
+...
+```
+
+Full backfill takes **5–10 minutes** for ~5,500 NFTs on Sui's free public RPC.
+
+**Terminal 2 — the API + UI** (needs your Groq key):
+
+```bash
+export GROQ_API_KEY=gsk_your_key_here
+bun run api
+```
+
+You'll see:
+```
+api: listening on http://localhost:4100
+```
+
+Then open your browser to **http://localhost:4100/ui** and start asking questions.
+
+---
+
+## Try these questions
+
+Open the UI and try each of these — the chat box handles them all. Notice the small `· indexed` or `· via LLM` tag under each answer showing which path handled it.
+
+| Question | Routes to | Why |
+|---|---|---|
+| `yeti #4737` | indexed | regex match → REST endpoint |
+| `yetis with halos` | indexed | trait substring search |
+| `show me orange furred yetis` | indexed | trait substring search |
+| `what fur colors exist` | indexed | trait-values lookup |
+| `how many yetis have halos` | indexed | search + count |
+| `yetis with wings` | indexed | 0 matches + suggests alternatives |
+| `show me the rarest yetis` | via LLM | Groq picks the right tools |
+| `tell me the most unique ones` | via LLM | same |
+| `hello` | via LLM | Groq responds naturally |
+
+**~90% of real questions skip the LLM entirely.** Only fuzzy or abstract questions hit Groq, keeping you well under the free-tier rate limit.
 
 ---
 
