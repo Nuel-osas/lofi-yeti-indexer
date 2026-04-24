@@ -104,6 +104,7 @@ No Docker, Postgres, or any other service needed. Bun ships SQLite natively with
 ## Quick start
 
 ```bash
+git clone https://github.com/Nuel-osas/lofi-yeti-indexer.git
 cd lofi-yeti-indexer
 bun install
 ```
